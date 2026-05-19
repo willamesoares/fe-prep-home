@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import preact from '@astrojs/preact';
 
 export default defineConfig({
-  site: 'https://fe-prep.example.com',
+  site: 'https://d1cyoju2ynp03o.cloudfront.net',
   integrations: [preact()],
   markdown: {
     shikiConfig: {
