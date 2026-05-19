@@ -1,0 +1,15 @@
+---
+import Base from '@/layouts/Base.astro';
+import Propose from '@/components/Propose';
+---
+
+<Base title="Propose a question" description="Submit a new frontend interview question.">
+  <section style="padding: 2rem 0 0.5rem">
+    <h1>Propose a question</h1>
+    <p style="color: var(--fg-muted); margin: 0 0 1rem">
+      Sign in with GitHub. Your submission becomes a pull request a maintainer reviews and merges.
+      Until that happens it won't appear on the site.
+    </p>
+  </section>
+  <Propose client:only="preact" />
+</Base>

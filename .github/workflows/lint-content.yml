@@ -1,0 +1,20 @@
+name: lint-content
+
+on:
+  pull_request:
+    paths:
+      - 'content/**'
+      - 'scripts/lint-content.ts'
+      - '.github/workflows/lint-content.yml'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint:content

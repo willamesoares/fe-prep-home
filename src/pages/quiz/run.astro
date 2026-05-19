@@ -1,0 +1,17 @@
+---
+import Base from '@/layouts/Base.astro';
+import QuizRunner from '@/components/QuizRunner';
+
+const url = Astro.url;
+const seed = url.searchParams.get('seed') ?? 'default';
+const tagsParam = url.searchParams.get('tags') ?? '';
+const tags = tagsParam ? tagsParam.split(',').filter(Boolean) : [];
+const count = Math.max(1, Math.min(100, Number(url.searchParams.get('count') ?? '10')));
+---
+
+<Base title="Running quiz" description="Frontend interview quiz session.">
+  <section style="padding: 1.5rem 0">
+    <a href="/quiz" style="font-size: 0.9rem; color: var(--fg-muted)">← New quiz</a>
+    <QuizRunner client:load seed={seed} tags={tags} count={count} />
+  </section>
+</Base>
