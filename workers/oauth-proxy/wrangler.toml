@@ -1,0 +1,3 @@
+name = "fe-prep-oauth-proxy"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
