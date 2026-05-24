@@ -7,6 +7,8 @@ changes.
 For deeper context on *why* the stack looks the way it does, see
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For visual flow diagrams (build,
 deploy, propose, quiz), see [docs/DIAGRAMS.md](docs/DIAGRAMS.md). For
+beginner-oriented explanations of the underlying concepts (CORS, OAuth Device
+Flow, OIDC, CloudFront, etc.), see [docs/CONCEPTS.md](docs/CONCEPTS.md). For
 human-facing how-to, see [README.md](README.md).
 
 ## What this is
