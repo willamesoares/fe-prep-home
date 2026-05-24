@@ -1,0 +1,50 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - name: Build
+        env:
+          PUBLIC_GITHUB_CLIENT_ID: ${{ secrets.PUBLIC_GITHUB_CLIENT_ID }}
+          PUBLIC_OAUTH_PROXY_URL: ${{ secrets.PUBLIC_OAUTH_PROXY_URL }}
+          PUBLIC_REPO_OWNER: ${{ github.repository_owner }}
+          PUBLIC_REPO_NAME: ${{ github.event.repository.name }}
+          PUBLIC_REPO_BRANCH: main
+        run: npm run build
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Sync to S3
+        run: |
+          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET }}/ --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "*.html" --exclude "*.json"
+          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET }}/ \
+            --cache-control "no-cache" \
+            --exclude "*" --include "*.html" --include "*.json"
+      - name: Invalidate CloudFront
+        if: env.CLOUDFRONT_DISTRIBUTION_ID != ''
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/*"

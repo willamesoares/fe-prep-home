@@ -1,0 +1,11 @@
+---
+import Base from '@/layouts/Base.astro';
+import QuizRunner from '@/components/QuizRunner';
+---
+
+<Base title="Running quiz" description="Frontend interview quiz session.">
+  <section style="padding: 1.5rem 0">
+    <a href="/quiz" style="font-size: 0.9rem; color: var(--fg-muted)">← New quiz</a>
+    <QuizRunner client:load />
+  </section>
+</Base>

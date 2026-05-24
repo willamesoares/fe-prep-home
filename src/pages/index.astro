@@ -1,0 +1,37 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '@/layouts/Base.astro';
+import QuestionBrowser, { type QuestionMeta } from '@/components/QuestionBrowser';
+import { TAGS } from '@/lib/constants';
+
+const entries = await getCollection('questions');
+
+const questions: QuestionMeta[] = entries
+  .map((e) => ({
+    slug: e.id,
+    title: e.data.title,
+    tags: e.data.tags as string[],
+    difficulty: e.data.difficulty,
+  }))
+  .sort((a, b) => a.title.localeCompare(b.title));
+
+const usedTags = Array.from(new Set(questions.flatMap((q) => q.tags))).sort((a, b) => {
+  const ai = TAGS.indexOf(a as any);
+  const bi = TAGS.indexOf(b as any);
+  if (ai !== -1 && bi !== -1) return ai - bi;
+  if (ai !== -1) return -1;
+  if (bi !== -1) return 1;
+  return a.localeCompare(b);
+});
+---
+
+<Base title="fe-prep" description="Categorized frontend interview Q&A flashcards.">
+  <section style="padding: 2rem 0 1rem">
+    <h1>Frontend interview prep</h1>
+    <p style="color: var(--fg-muted); margin: 0">
+      {questions.length} questions across {usedTags.length} categories. Free, open source, no account needed.
+      Try the <a href="/quiz">quiz mode</a>.
+    </p>
+  </section>
+  <QuestionBrowser client:idle questions={questions} allTags={usedTags} />
+</Base>

@@ -1,0 +1,11 @@
+{
+  "name": "fe-prep-oauth-proxy",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.95.0"
+  }
+}

@@ -1,0 +1,30 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '@/layouts/Base.astro';
+import QuizSetup from '@/components/QuizSetup';
+import { TAGS } from '@/lib/constants';
+
+const entries = await getCollection('questions');
+
+const tagCounts: Record<string, number> = {};
+for (const e of entries) {
+  for (const t of e.data.tags) {
+    tagCounts[t] = (tagCounts[t] ?? 0) + 1;
+  }
+}
+
+const usedTags = Object.keys(tagCounts).sort(
+  (a, b) => TAGS.indexOf(a as any) - TAGS.indexOf(b as any),
+);
+---
+
+<Base title="Quiz" description="Spin up a quick set of frontend interview questions.">
+  <section style="padding: 2rem 0 0.5rem">
+    <h1>Quiz mode</h1>
+    <p style="color: var(--fg-muted); margin: 0 0 1rem">
+      Pick categories and a count. You'll flip through the cards one at a time and can share the
+      result URL to give someone the same set.
+    </p>
+  </section>
+  <QuizSetup client:load allTags={usedTags} tagCounts={tagCounts} totalCount={entries.length} />
+</Base>
