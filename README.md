@@ -2,7 +2,7 @@
 
 A static site of categorized frontend interview Q&A — free, open content, no account needed to read.
 
-For the product rationale, full stack breakdown, and a record of the alternatives considered for each choice, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+For the product rationale, full stack breakdown, and a record of the alternatives considered for each choice, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For visual flow diagrams, see [docs/DIAGRAMS.md](docs/DIAGRAMS.md).
 
 ## Local dev
 

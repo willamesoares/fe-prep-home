@@ -5,8 +5,9 @@ Copilot, Codex, Aider, etc.) working in this repo. Read it before making
 changes.
 
 For deeper context on *why* the stack looks the way it does, see
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For human-facing how-to, see
-[README.md](README.md).
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For visual flow diagrams (build,
+deploy, propose, quiz), see [docs/DIAGRAMS.md](docs/DIAGRAMS.md). For
+human-facing how-to, see [README.md](README.md).
 
 ## What this is
 

@@ -4,6 +4,8 @@ This document explains what fe-prep does, why each piece of the stack is here, h
 
 If you are looking for "how do I run this locally" or "how do I contribute a question," see the [README](../README.md). This document is the layer underneath that.
 
+For mermaid diagrams of the same flows described here in prose (build, deploy, propose, quiz), see [DIAGRAMS.md](DIAGRAMS.md).
+
 ---
 
 ## 1. Product
