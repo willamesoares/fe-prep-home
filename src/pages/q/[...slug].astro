@@ -50,7 +50,7 @@ const [questionHtml, answerHtml] = await Promise.all([
       </details>
     )}
     <p style="margin-top: 2rem; color: var(--fg-muted); font-size: 0.9rem">
-      Spotted something wrong? <a href="/propose">Propose an edit on GitHub</a>.
+      Spotted something wrong? <a href={`/propose?edit=${entry.id}`}>Propose an edit on GitHub</a>.
     </p>
   </article>
 </Base>

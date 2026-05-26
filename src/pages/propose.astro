@@ -1,6 +1,20 @@
 ---
+import { getCollection } from 'astro:content';
 import Base from '@/layouts/Base.astro';
 import Propose from '@/components/Propose';
+import { TAGS } from '@/lib/constants';
+
+const entries = await getCollection('questions');
+const usedTags = Array.from(
+  new Set([...TAGS, ...entries.flatMap((e) => e.data.tags as string[])]),
+).sort((a, b) => {
+  const ai = TAGS.indexOf(a as any);
+  const bi = TAGS.indexOf(b as any);
+  if (ai !== -1 && bi !== -1) return ai - bi;
+  if (ai !== -1) return -1;
+  if (bi !== -1) return 1;
+  return a.localeCompare(b);
+});
 ---
 
 <Base title="Propose a question" description="Submit a new frontend interview question.">
@@ -11,5 +25,5 @@ import Propose from '@/components/Propose';
       Until that happens it won't appear on the site.
     </p>
   </section>
-  <Propose client:only="preact" />
+  <Propose client:only="preact" suggestedTags={usedTags} />
 </Base>

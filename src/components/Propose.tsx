@@ -11,9 +11,14 @@ import {
   storeToken,
   type DeviceCodeResponse,
 } from '@/lib/githubOAuth';
-import { submitQuestion } from '@/lib/octokit';
+import { fetchQuestionForEdit, submitQuestion, updateQuestion } from '@/lib/octokit';
 import { slugify } from '@/lib/slug';
 import { TAGS, DIFFICULTIES, TAG_PATTERN, normalizeTag } from '@/lib/constants';
+import { parseFrontmatter } from '@/lib/frontmatter';
+
+interface Props {
+  suggestedTags?: readonly string[];
+}
 
 const TEMPLATE = `# Question
 
@@ -35,7 +40,7 @@ type AuthState =
   | { kind: 'signed-in'; token: string }
   | { kind: 'error'; message: string };
 
-export default function Propose() {
+export default function Propose({ suggestedTags = TAGS }: Props) {
   const [auth, setAuth] = useState<AuthState>(() => {
     const t = getStoredToken();
     return t ? { kind: 'signed-in', token: t } : { kind: 'signed-out' };
@@ -50,15 +55,62 @@ export default function Propose() {
   const [result, setResult] = useState<{ prUrl: string } | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const [editSlug, setEditSlug] = useState<string | null>(null);
+  const [editPath, setEditPath] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [primaryTagLocked, setPrimaryTagLocked] = useState<string | null>(null);
+
   const editorParent = useRef<HTMLDivElement>(null);
   const editorView = useRef<EditorView | null>(null);
-  const [body, setBody] = useState(TEMPLATE);
+  const [body, setBody] = useState('');
+  const [initialBody, setInitialBody] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!editorParent.current || editorView.current) return;
+    if (typeof window === 'undefined') return;
+    const slug = new URLSearchParams(window.location.search).get('edit');
+    if (slug) {
+      setEditSlug(slug);
+    } else {
+      setInitialBody(TEMPLATE);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!editSlug) return;
+    let cancelled = false;
+    setEditLoading(true);
+    fetchQuestionForEdit(editSlug)
+      .then(({ raw, path }) => {
+        if (cancelled) return;
+        const { data, body: fmBody } = parseFrontmatter(raw);
+        if (data.title) setTitle(data.title);
+        if (data.tags && data.tags.length > 0) {
+          setSelectedTags(new Set(data.tags));
+          setPrimaryTagLocked(data.tags[0]);
+        }
+        if (data.difficulty) setDifficulty(data.difficulty);
+        setEditPath(path);
+        setInitialBody(fmBody.replace(/^\s+/, '').replace(/\s+$/, '') + '\n');
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setEditError(`Couldn't load that question for editing: ${String(e)}`);
+        setInitialBody(TEMPLATE);
+      })
+      .finally(() => {
+        if (!cancelled) setEditLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editSlug]);
+
+  useEffect(() => {
+    if (!editorParent.current || editorView.current || initialBody === null) return;
     editorView.current = new EditorView({
       state: EditorState.create({
-        doc: TEMPLATE,
+        doc: initialBody,
         extensions: [
           basicSetup,
           markdown(),
@@ -70,11 +122,12 @@ export default function Propose() {
       }),
       parent: editorParent.current,
     });
+    setBody(initialBody);
     return () => {
       editorView.current?.destroy();
       editorView.current = null;
     };
-  }, []);
+  }, [initialBody]);
 
   async function startSignIn() {
     if (!hasClientId()) {
@@ -103,6 +156,7 @@ export default function Propose() {
   }
 
   function toggleTag(tag: string) {
+    if (primaryTagLocked && tag === primaryTagLocked) return;
     const next = new Set(selectedTags);
     if (next.has(tag)) next.delete(tag);
     else next.add(tag);
@@ -155,8 +209,7 @@ export default function Propose() {
     setSubmitting(true);
     try {
       const primaryTag = Array.from(selectedTags)[0]!;
-      const slug = slugify(title);
-      const filePath = `content/${primaryTag}/${slug}.md`;
+      const filePath = editPath ?? `content/${primaryTag}/${slugify(title)}.md`;
       const frontmatter = [
         '---',
         `title: ${JSON.stringify(title.trim())}`,
@@ -167,19 +220,29 @@ export default function Propose() {
       ].join('\n');
       const fileContent = frontmatter + body.trim() + '\n';
       const prBody = [
-        `Proposed by **@${'web'}** via fe-prep.`,
+        editSlug
+          ? `Edit to \`${filePath}\` proposed via fe-prep.`
+          : `Proposed via fe-prep.`,
         '',
         `**Title:** ${title}`,
         `**Tags:** ${Array.from(selectedTags).join(', ')}`,
         `**Difficulty:** ${difficulty}`,
       ].join('\n');
-      const out = await submitQuestion({
-        token: auth.token,
-        filePath,
-        fileContent,
-        title,
-        body: prBody,
-      });
+      const out = editSlug
+        ? await updateQuestion({
+            token: auth.token,
+            filePath,
+            fileContent,
+            title,
+            body: prBody,
+          })
+        : await submitQuestion({
+            token: auth.token,
+            filePath,
+            fileContent,
+            title,
+            body: prBody,
+          });
       setResult(out);
     } catch (e) {
       setSubmitError(String(e));
@@ -191,9 +254,11 @@ export default function Propose() {
   if (result) {
     return (
       <div class="quiz-card">
-        <h2 style="margin-top: 0">Thanks — your question is submitted</h2>
+        <h2 style="margin-top: 0">
+          Thanks — your {editSlug ? 'edit' : 'question'} is submitted
+        </h2>
         <p>
-          Your pull request is now open. A maintainer will review it and the question will go live
+          Your pull request is now open. A maintainer will review it and the change will appear
           on the site once merged.
         </p>
         <a class="btn primary" href={result.prUrl} target="_blank" rel="noopener noreferrer">
@@ -205,6 +270,23 @@ export default function Propose() {
 
   return (
     <div>
+      {editSlug && (
+        <div
+          class="quiz-card"
+          style="margin-bottom: 1rem; padding: 0.75rem 1rem; font-size: 0.9rem"
+        >
+          {editLoading ? (
+            <>Loading <code>content/{editSlug}.md</code>…</>
+          ) : editError ? (
+            <span style="color: var(--hard)">{editError}</span>
+          ) : (
+            <>
+              Editing <code>content/{editSlug}.md</code>. The primary tag is fixed (changing it
+              would move the file to another folder).
+            </>
+          )}
+        </div>
+      )}
       <AuthPanel auth={auth} onSignIn={startSignIn} onSignOut={signOut} />
       <form onSubmit={submit} style="margin-top: 1.5rem">
         <label style="display:block; margin-bottom: 0.75rem">
@@ -225,40 +307,51 @@ export default function Propose() {
             Suggested tags
           </div>
           <div class="filters" style="margin: 0">
-            {TAGS.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                class={`tag-chip ${selectedTags.has(tag) ? 'active' : ''}`}
-                data-clickable
-                onClick={() => toggleTag(tag)}
-                aria-pressed={selectedTags.has(tag)}
-              >
-                {tag}
-              </button>
-            ))}
+            {suggestedTags.map((tag) => {
+              const locked = primaryTagLocked === tag;
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  class={`tag-chip ${selectedTags.has(tag) ? 'active' : ''}`}
+                  data-clickable
+                  onClick={() => toggleTag(tag)}
+                  aria-pressed={selectedTags.has(tag)}
+                  disabled={locked}
+                  title={locked ? 'Primary tag — fixed in edit mode' : undefined}
+                  style={locked ? 'cursor: not-allowed; opacity: 0.85' : undefined}
+                >
+                  {tag}
+                </button>
+              );
+            })}
           </div>
-          {Array.from(selectedTags).some((t) => !(TAGS as readonly string[]).includes(t)) && (
+          {Array.from(selectedTags).some((t) => !suggestedTags.includes(t)) && (
             <>
               <div style="font-size: 0.78rem; color: var(--fg-subtle); margin: 0.6rem 0 0.4rem">
                 Custom tags
               </div>
               <div class="filters" style="margin: 0">
                 {Array.from(selectedTags)
-                  .filter((t) => !(TAGS as readonly string[]).includes(t))
-                  .map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      class="tag-chip active"
-                      data-clickable
-                      onClick={() => toggleTag(tag)}
-                      aria-pressed={true}
-                      title="Click to remove"
-                    >
-                      {tag} ×
-                    </button>
-                  ))}
+                  .filter((t) => !suggestedTags.includes(t))
+                  .map((tag) => {
+                    const locked = primaryTagLocked === tag;
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        class="tag-chip active"
+                        data-clickable
+                        onClick={() => toggleTag(tag)}
+                        aria-pressed={true}
+                        disabled={locked}
+                        title={locked ? 'Primary tag — fixed in edit mode' : 'Click to remove'}
+                        style={locked ? 'cursor: not-allowed; opacity: 0.85' : undefined}
+                      >
+                        {tag}{locked ? '' : ' ×'}
+                      </button>
+                    );
+                  })}
               </div>
             </>
           )}
@@ -324,9 +417,13 @@ export default function Propose() {
         <button
           type="submit"
           class="btn primary"
-          disabled={auth.kind !== 'signed-in' || submitting}
+          disabled={auth.kind !== 'signed-in' || submitting || editLoading}
         >
-          {submitting ? 'Submitting…' : 'Submit as pull request'}
+          {submitting
+            ? 'Submitting…'
+            : editSlug
+              ? 'Submit edit as pull request'
+              : 'Submit as pull request'}
         </button>
       </form>
     </div>
