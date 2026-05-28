@@ -20,7 +20,10 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - run: npm ci
+      # --ignore-scripts blocks postinstall RCE from a compromised dep. If a
+      # future dep needs its postinstall (e.g. sharp's binary download for
+      # Astro image optimization), allowlist it instead of dropping the flag.
+      - run: npm ci --ignore-scripts
       - name: Build
         env:
           PUBLIC_GITHUB_CLIENT_ID: ${{ secrets.PUBLIC_GITHUB_CLIENT_ID }}

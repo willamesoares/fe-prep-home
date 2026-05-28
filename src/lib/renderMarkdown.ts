@@ -1,5 +1,6 @@
 import { Marked } from 'marked';
 import { createHighlighter, type Highlighter } from 'shiki';
+import DOMPurify from 'isomorphic-dompurify';
 
 const LANG_ALIASES: Record<string, string> = {
   js: 'javascript',
@@ -64,5 +65,6 @@ export async function renderMarkdown(markdown: string): Promise<string> {
     },
   });
 
-  return marked.parse(markdown, { async: false }) as string;
+  const html = marked.parse(markdown, { async: false }) as string;
+  return DOMPurify.sanitize(html);
 }

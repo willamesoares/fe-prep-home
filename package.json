@@ -17,6 +17,7 @@
     "astro": "^5.16.0",
     "codemirror": "^6.0.2",
     "gray-matter": "^4.0.3",
+    "isomorphic-dompurify": "^3.14.0",
     "marked": "^18.0.3",
     "octokit": "^4.1.4",
     "preact": "^10.27.2",
